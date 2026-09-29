@@ -112,7 +112,7 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS CORRIGIDO
+    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 30px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
@@ -170,10 +170,12 @@ if conexao:
     # 📋 TELA: PAINEL DO ESTOQUE & HISTÓRICO
     # =========================================================================
     elif st.session_state["tela_ativa"] == "📋 Painel do Estoque & Histórico":
+        # Botão de voltar movido para o topo isolado
         if st.button("⬅️ Voltar ao Menu Principal", key="back_p1"):
             st.session_state["tela_ativa"] = "🏠 Menu Principal"
             st.rerun()
             
+        st.markdown("---")
         st.subheader("📋 Saldo Atual do Depósito")
         cursor.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
         pecas_deposito = cursor.fetchall()
@@ -212,5 +214,3 @@ if conexao:
                         st.error("❌ Senha incorreta!")
                     else:
                         id_del = st.session_state["id_para_excluir"]
-                        nome_del = st.session_state["nome_para_excluir"]
-
