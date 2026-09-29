@@ -91,8 +91,9 @@ else:
 st.markdown("---")
 
 if conexao:
-    # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
     cursor = conexao.cursor()
+    
+    # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
     cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
     pecas_criticas = [linha[0] for linha in cursor.fetchall()]
     if pecas_criticas:
@@ -124,7 +125,6 @@ if conexao:
             nome = st.text_input("Nome da Peça / Código:").strip().upper()
             qtd = st.number_input("Quantidade de Entrada:", min_value=1, step=1)
             if st.form_submit_button("Confirmar Entrada") and nome:
-                cursor = conexao.cursor()
                 cursor.execute("INSERT INTO estoque (nome_peca, quantidade) VALUES (%s, %s) ON CONFLICT(nome_peca) DO UPDATE SET quantidade = estoque.quantidade + EXCLUDED.quantidade", (nome, qtd))
                 cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("ENTRADA", nome, qtd, "-", "Abastecimento de Depósito", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                 conexao.commit()
@@ -134,19 +134,24 @@ if conexao:
     # --- ABA 3: SAÍDA ---
     elif aba == "Dar Saída (Destinar à Frota)":
         st.subheader("📤 Registro de Saída para Frota")
-        cursor = conexao.cursor()
-        cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        pecas = [linha[0] for linha in cursor.fetchall()]
+        cursor.execute("SELECT id, nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
+        dados_saida = cursor.fetchall()
         
-        if not pecas:
+        if not dados_saida:
             st.warning("Não há peças disponíveis.")
         else:
+            # Cria um dicionário para mapear o texto exibido ao ID da peça
+            opcoes_saida = {f"{linha[1]}": linha[0] for linha in dados_saida}
+            
             with st.form("form_saida", clear_on_submit=True):
-                peca_sel = st.selectbox("Selecione a Peça:", pecas)
-                cursor = conexao.cursor()
-                cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
+                peca_exibida = st.selectbox("Selecione a Peça:", list(opcoes_saida.keys()))
+                id_peca_sel = opcoes_saida[peca_exibida]
+                
+                cursor.execute("SELECT quantidade, nome_peca FROM estoque WHERE id = %s", (id_peca_sel,))
                 resultado_saldo = cursor.fetchone()
                 saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0
+                nome_peca_real = resultado_saldo[1]
+                
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
@@ -155,26 +160,28 @@ if conexao:
                 
                 if st.form_submit_button("Confirmar Saída") and frota and utilizacao:
                     novo_saldo = saldo_atual - qtd_saida
-                    cursor.execute("UPDATE estoque SET quantidade = %s WHERE nome_peca = %s", (novo_saldo, peca_sel))
-                    cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", peca_sel, qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+                    cursor.execute("UPDATE estoque SET quantidade = %s WHERE id = %s", (novo_saldo, id_peca_sel))
+                    cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", nome_peca_real, qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                     conexao.commit()
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA AUDITADA (CORREÇÃO COM [0] CORRETO) ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA BASEADA EM ID (TOTALMENTE IMPOSSÍVEL DE FALHAR) ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
         
-        cursor = conexao.cursor()
-        cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()]
+        cursor.execute("SELECT id, nome_peca FROM estoque ORDER BY nome_peca")
+        dados_exclusao = cursor.fetchall()
         
-        if not dados_estoque_atual:
+        if not dados_exclusao:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
         else:
+            # Cria a lista de opções limpas vinculando o Nome exibido ao ID numérico
+            opcoes_exclusao = {f"{linha[1]}": linha[0] for linha in dados_exclusao}
+            
             with st.form("form_exclusao", clear_on_submit=True):
-                peca_para_excluir = st.selectbox("Selecione a Peça que deseja deletar do estoque:", dados_estoque_atual)
+                peca_exibida = st.selectbox("Selecione a Peça que deseja deletar do estoque:", list(opcoes_exclusao.keys()))
                 senha_digitada = st.text_input("Digite sua senha de Garagista para autorizar:", type="password")
                 
                 botao_deletar = st.form_submit_button("💥 Confirmar Remoção do Estoque")
@@ -192,11 +199,6 @@ if conexao:
                         if not garagista_identificado:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
-                            cursor = conexao.cursor()
+                            id_deletar = opcoes_exclusao[peca_exibida]
                             
-                            # 1. Pega a quantidade correta extraindo o índice [0] da tupla do fetchone()
-                            cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
-                            resultado_busca = cursor.fetchone()
-                            qtd_antes_deletar = int(resultado_busca[0]) if resultado_busca else 0
-                            
-                            # 2. Executa a deleção enviando a string pura da peça
+                            # 1. Puxa os dados atuais baseando-se no ID fixo
