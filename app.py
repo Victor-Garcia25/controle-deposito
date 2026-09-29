@@ -78,50 +78,52 @@ st.markdown(
     h1, h2, h3, p, label, .stMarkdown {
         color: white !important;
     }
-    /* Estilização para deixar os botões invisíveis por cima dos cards HTML */
+    /* Estilização para transformar os botões nativos do Streamlit nos cards brancos */
     div.stButton > button {
         background-color: white !important;
         color: #333333 !important;
         border: 1px solid #cccccc !important;
         border-radius: 12px !important;
-        padding: 40px 10px !important;
+        padding: 30px 10px !important;
         font-weight: bold !important;
         font-size: 16px !important;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.15) !important;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.2) !important;
         min-height: 180px !important;
         width: 100% !important;
+        white-space: pre-line !important; /* Permite quebra de linha com \n */
         transition: transform 0.2s, box-shadow 0.2s;
     }
     div.stButton > button:hover {
-        transform: translateY(-4px) !important;
-        box-shadow: 0px 8px 25px rgba(0,0,0,0.25) !important;
-        border-color: #ff6600 !important;
+        transform: translateY(-5px) !important;
+        box-shadow: 0px 8px 25px rgba(0,0,0,0.3) !important;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# --- 1. BARRA LATERAL ---
+# --- 1. BARRA LATERAL (NAVEGAÇÃO REFORMULADA) ---
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 if dados_img:
     st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{dados_img}" style="max-width: 85%; max-height: 150px; border-radius: 8px;"></div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("<hr style='margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 
-# Estado para controlar qual tela está ativa por clique dos cards
+# Inicializa a memória da tela se ela não existir
 if "tela_ativa" not in st.session_state:
     st.session_state["tela_ativa"] = "🏠 Menu Principal"
 
-# Menu da barra lateral para navegação rápida ou voltar caso queira
-aba_lateral = st.sidebar.selectbox("Navegação Direta:", [
-    "🏠 Menu Principal",
-    "📋 Painel do Estoque & Histórico", 
-    "📥 Dar Entrada em Peça", 
-    "📤 Dar Saída (Destinar à Frota)"
-], index=["🏠 Menu Principal", "📋 Painel do Estoque & Histórico", "📥 Dar Entrada em Peça", "📤 Dar Saída (Destinar à Frota)"].index(st.session_state["tela_ativa"]))
+opcoes_menu = ["🏠 Menu Principal", "📋 Painel do Estoque & Histórico", "📥 Dar Entrada em Peça", "📤 Dar Saída (Destinar à Frota)"]
 
-# Sincroniza a seleção da barra lateral
+# Caixinha de seleção lateral redesenhada para evitar conflitos de tela vazia
+aba_lateral = st.sidebar.selectbox(
+    "Navegação Direta:", 
+    opcoes_menu, 
+    index=opcoes_menu.index(st.session_state["tela_ativa"]),
+    key="selectbox_navegacao"
+)
+
+# Se o usuário mudar manualmente pela caixinha lateral, atualiza o estado imediatamente
 if aba_lateral != st.session_state["tela_ativa"]:
     st.session_state["tela_ativa"] = aba_lateral
     st.rerun()
@@ -134,7 +136,7 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS (NATIVO E SEGURO)
+    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS (NATIVO CORRIGIDO)
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 30px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
@@ -142,8 +144,8 @@ if conexao:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            # Transforma o próprio botão do Streamlit no Card visual com a borda laranja
             st.markdown("<div style='border-top: 6px solid #ff6600; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
+            # \n serve para empurrar o texto para baixo, imitando o layout do card
             if st.button("📊\n\nPainel Geral\n& Histórico", key="card_p1", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
@@ -184,13 +186,12 @@ if conexao:
             for id_peca, nome_peca, quantidade in pecas_deposito:
                 col_info, col_btn = st.columns([6, 1])
                 
-                # Ajuste de layout interno para não aplicar o estilo gigante do card nos sub-botões
                 if quantidade == 1:
                     col_info.markdown(f"🔴 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades (CRÍTICO)")
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
-                # Estilo inline simples para os botões de lixeira menor
+                # Botão menor de lixeira para excluir peças individuais
                 if col_btn.button("🗑️ Apagar", key=f"del_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
@@ -200,7 +201,7 @@ if conexao:
                 st.markdown("---")
                 st.warning(f"⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar:", type="password", key="pwd_del")
-                col_conf, col_canc = st.columns(2)
+                col_conf, col_canc = st.columns([1, 5])
                 
                 if col_conf.button("💥 Confirmar Deletar", type="primary", key="conf_del"):
                     garagista_identificado = None
@@ -221,3 +222,4 @@ if conexao:
                 if col_canc.button("Cancelar", key="canc_del"):
                     del st.session_state["id_para_excluir"]
                     st.rerun()
+        else:
