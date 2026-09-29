@@ -136,7 +136,7 @@ if conexao:
         st.subheader("📤 Registro de Saída para Frota")
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        pecas = [linha[0] for linha in cursor.fetchall()]
+        pecas = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro da tupla
         
         if not pecas:
             st.warning("Não há peças disponíveis.")
@@ -145,7 +145,7 @@ if conexao:
                 peca_sel = st.selectbox("Selecione a Peça:", pecas)
                 cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
-                saldo_atual = int(cursor.fetchone()[0]) # Correção aplicada aqui
+                saldo_atual = int(cursor.fetchone()[0]) # CORREÇÃO: Extrai o número limpo da tupla
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=saldo_atual, step=1)
@@ -167,7 +167,7 @@ if conexao:
         
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()]
+        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro da tupla
         
         if not dados_estoque_atual:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
@@ -192,11 +192,9 @@ if conexao:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
                             cursor = conexao.cursor()
-                            # CORREÇÃO DEFINITIVA: Extrai o elemento zero da tupla retornada pelo Postgres
+                            # CORREÇÃO DEFINITIVA: Extrai o elemento de dentro da tupla de forma garantida
                             cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
                             resultado_busca = cursor.fetchone()
                             qtd_antes_deletar = int(resultado_busca[0]) if resultado_busca else 0
                             
                             # Remove do saldo atual
-                            cursor.execute("DELETE FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
-                            
