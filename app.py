@@ -92,17 +92,16 @@ else:
 st.markdown("---")
 
 if conexao:
-    cursor_principal = conexao.cursor() # FIX DEFINITIVO: Adicionado os parênteses () corretos aqui
+    cursor_principal = conexao.cursor()
 
     # --- ABA 1: VISUALIZAR COM BOTÃO DE EXCLUIR ---
     if aba == "📋 Painel do Estoque & Histórico":
-        # O Alerta de estoque crítico agora fica apenas dentro desta aba para não travar o resto do sistema
         try:
             cursor_principal.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
             dados_criticos = cursor_principal.fetchall()
             pecas_criticas = [str(linha[0]) for linha in dados_criticos] if dados_criticos else []
             if pecas_criticas:
-                st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
+                st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'### **{p}**' for p in pecas_criticas])}")
                 st.markdown("---")
         except Exception:
             pass
@@ -113,7 +112,7 @@ if conexao:
         
         if pecas_deposito:
             for id_peca, nome_peca, quantidade in pecas_deposito:
-                col_info, col_btn = st.columns([4, 1])
+                col_info, col_btn = st.columns(2)
                 
                 if quantidade == 1:
                     col_info.markdown(f"🔴 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades (CRÍTICO)")
@@ -207,3 +206,5 @@ if conexao:
                 
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
+                qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
+                frota = st.text_input("Identificação da Frota:").strip().upper()
