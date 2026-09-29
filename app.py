@@ -112,7 +112,7 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS
+    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS CORRIGIDO
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 30px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
@@ -182,14 +182,13 @@ if conexao:
         
         if pecas_deposito:
             for id_peca, nome_peca, quantidade in pecas_deposito:
-                col_info, col_btn = st.columns([5, 1])
+                col_info, col_btn = st.columns([6, 1])
                 
                 if quantidade == 1:
                     col_info.markdown(f"🔴 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades (CRÍTICO)")
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
-                # Reseta temporariamente a regra de espaçamento grande para este botão menor
                 st.markdown("""<style>div[data-testid="stColumn"] button { min-height: auto !important; padding: 5px 10px !important; }</style>""", unsafe_allow_html=True)
                 if col_btn.button("🗑️ Apagar", key=f"del_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
@@ -212,3 +211,6 @@ if conexao:
                     if not garagista_identificado:
                         st.error("❌ Senha incorreta!")
                     else:
+                        id_del = st.session_state["id_para_excluir"]
+                        nome_del = st.session_state["nome_para_excluir"]
+
