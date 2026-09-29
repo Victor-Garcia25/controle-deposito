@@ -4,7 +4,6 @@ import pandas as pd
 from datetime import datetime
 import base64
 import os
-import io
 
 st.set_page_config(page_title="Controle de Depósito", layout="wide")
 
@@ -22,41 +21,36 @@ def conectar_banco():
             database=st.secrets["DB_NAME"],
             user=st.secrets["DB_USER"],
             password=st.secrets["DB_PASSWORD"],
-            port=st.secrets["DB_PORT"],
-            connect_timeout=5
+            port=st.secrets["DB_PORT"]
         )
         return conexao
-    except Exception:
+    except Exception as e:
+        st.error(f"Erro ao conectar ao banco de dados na nuvem: {e}")
         return None
 
 conexao = conectar_banco()
 
-# Inicialização das tabelas de forma segura
 if conexao:
-    try:
-        cursor = conexao.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS estoque (
-                id SERIAL PRIMARY KEY,
-                nome_peca TEXT UNIQUE,
-                quantidade INTEGER DEFAULT 0
-            )
-        ''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS historico (
-                id SERIAL PRIMARY KEY,
-                tipo_movimentacao TEXT,
-                nome_peca TEXT,
-                quantidade INTEGER,
-                frota TEXT,
-                utilizacao TEXT,
-                data_hora TEXT
-            )
-        ''')
-        conexao.commit()
-        cursor.close()
-    except Exception:
-        pass
+    cursor = conexao.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS estoque (
+            id SERIAL PRIMARY KEY,
+            nome_peca TEXT UNIQUE,
+            quantidade INTEGER DEFAULT 0
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS historico (
+            id SERIAL PRIMARY KEY,
+            tipo_movimentacao TEXT,
+            nome_peca TEXT,
+            quantidade INTEGER,
+            frota TEXT,
+            utilizacao TEXT,
+            data_hora TEXT
+        )
+    ''')
+    conexao.commit()
 
 # --- FUNÇÃO PARA CONVERTER IMAGEM PARA BASE64 ---
 def obter_imagem_base64(caminho_imagem):
@@ -74,143 +68,144 @@ for formato in ["logo.png", "logo.jpg", "logo.jpeg", "LOGO.PNG", "LOGO.JPG", "LO
 
 dados_img = obter_imagem_base64(nome_logo) if nome_logo else None
 
-# --- ESTILIZAÇÃO DO FUNDO AZUL DO SISTEMA ---
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background: linear-gradient(135deg, #0b1e4f 0%, #164095 50%, #1e5fc1 100%);
-    }
-    h1, h2, h3, p, label, .stMarkdown {
-        color: white !important;
-    }
-    div.stButton > button {
-        background-color: #ffffff !important;
-        color: #0b1e4f !important;
-        font-weight: bold !important;
-        border-radius: 8px !important;
-        border: none !important;
-        box-shadow: 0px 3px 10px rgba(0,0,0,0.2) !important;
-        transition: background-color 0.2s, color 0.2s;
-    }
-    div.stButton > button:hover {
-        background-color: #ff6600 !important;
-        color: white !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Oculta a barra lateral cinza por padrão para focar no layout de blocos
-st.markdown("<style>[data-testid=\"stSidebar\"] {display: none;}</style>", unsafe_allow_html=True)
-
-# Inicializa o controle de navegação de telas
-if "tela_ativa" not in st.session_state:
-    st.session_state["tela_ativa"] = "🏠 Menu Principal"
-
-# --- LOGOMARCA FIXA NO TOPO ---
+# --- 1. BARRA LATERAL ---
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 if dados_img:
-    st.markdown(f'<div style="text-align: center; margin-top: 10px; margin-bottom: 20px;"><img src="data:image/png;base64,{dados_img}" style="max-width: 140px; border-radius: 8px;"></div>', unsafe_allow_html=True)
+    st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{dados_img}" style="max-width: 85%; max-height: 150px; border-radius: 8px;"></div>', unsafe_allow_html=True)
+
+st.sidebar.markdown("<hr style='margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
+
+aba = st.sidebar.radio("Selecione a Ação", [
+    "📋 Painel do Estoque & Histórico", 
+    "📥 Dar Entrada em Peça", 
+    "📤 Dar Saída (Destinar à Frota)"
+])
+
+# --- 2. PARTE CENTRAL ---
+if dados_img:
+    st.markdown(f'<div style="text-align: center; margin-bottom: -10px;"><img src="data:image/png;base64,{dados_img}" style="max-width: 180px; max-height: 120px; border-radius: 8px; margin-bottom: 10px;"><h1 style="font-weight: bold; margin-top: 0px; color: #ffffff;">Controle de Depósito</h1></div>', unsafe_allow_html=True)
+else:
+    st.markdown('<h1 style="text-align: center; font-weight: bold; color: #ffffff;">Controle de Depósito</h1>', unsafe_allow_html=True)
+
+st.markdown("---")
 
 if conexao:
-    # =========================================================================
-    # 🏠 TELA 1: MENU PRINCIPAL (DASHBOARD)
-    # =========================================================================
-    if st.session_state["tela_ativa"] == "🏠 Menu Principal":
-        st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 40px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown("""
-                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #ff6600; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 12px;'>
-                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>📊</h1>
-                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Painel Geral & Histórico</p>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("📊 Acessar Painel", key="btn_p1_main", use_container_width=True):
-                st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
-                st.rerun()
-
-        with col2:
-            st.markdown("""
-                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #0066cc; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 12px;'>
-                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>📥</h1>
-                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Dar Entrada em Peça</p>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("📥 Acessar Entradas", key="btn_p2_main", use_container_width=True):
-                st.session_state["tela_ativa"] = "📥 Dar Entrada em Peça"
-                st.rerun()
-
-        with col3:
-            st.markdown("""
-                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #9933ff; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 12px;'>
-                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>📤</h1>
-                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Dar Saída para Frota</p>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("📤 Acessar Saídas", key="btn_p3_main", use_container_width=True):
-                st.session_state["tela_ativa"] = "📤 Dar Saída (Destinar à Frota)"
-                st.rerun()
-
-        with col4:
-            qtd_criticos = 0
-            try:
-                cursor_c = conexao.cursor()
-                cursor_c.execute("SELECT COUNT(*) FROM estoque WHERE quantidade = 1")
-                res_criticos = cursor_c.fetchone()
-                qtd_criticos = res_criticos[0] if res_criticos else 0
-                cursor_c.close()
-            except Exception:
-                qtd_criticos = 0
-                    
-            st.markdown(f"""
-                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #00cc66; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 12px;'>
-                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>⚠️</h1>
-                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Alertas Críticos: {qtd_criticos}</p>
-                </div>
-            """, unsafe_allow_html=True)
-            if st.button("⚠️ Verificar Alertas", key="btn_p4_main", use_container_width=True):
-                st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
-                st.rerun()
-
-    # =========================================================================
-    # 📋 TELA 2: PAINEL DO ESTOQUE & HISTÓRICO
-    # =========================================================================
-    elif st.session_state["tela_ativa"] == "📋 Painel do Estoque & Histórico":
-        if st.button("⬅️ Voltar para o Menu Principal", key="back_btn_1"):
-            st.session_state["tela_ativa"] = "🏠 Menu Principal"
-            st.rerun()
-            
+    cursor = conexao.cursor()
+    
+    # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
+    cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()]
+    if pecas_criticas:
+        st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
         st.markdown("---")
+
+    # --- ABA 1: VISUALIZAR COM BOTÃO DE EXCLUIR ---
+    if aba == "📋 Painel do Estoque & Histórico":
         st.subheader("📋 Saldo Atual do Depósito")
         
-        try:
-            cursor_p = conexao.cursor()
-            cursor_p.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
-            pecas_deposito = cursor_p.fetchall()
-            
-            df_estoque = pd.read_sql_query("SELECT nome_peca as \"Nome da Peça\", quantidade as \"Quantidade em Estoque\" FROM estoque ORDER BY nome_peca", conexao)
-            df_historico = pd.read_sql_query("SELECT tipo_movimentacao as \"Operação\", nome_peca as \"Peça\", quantidade as \"Qtd\", frota as \"Frota/Veículo\", utilizacao as \"Utilização\", data_hora as \"Data/Hora\" FROM historico ORDER BY id DESC", conexao)
-            
-            if pecas_deposito:
-                for id_peca, nome_peca, quantidade in pecas_deposito:
-                    col_info, col_btn = st.columns([5, 1])
-                    if quantidade == 1:
-                        col_info.markdown(f"🔴 **{nome_peca}** — Estoque: `{quantidade}` unidades (CRÍTICO)")
-                    else:
-                        col_info.markdown(f"📦 **{nome_peca}** — Estoque: `{quantidade}` unidades")
-                    
-                    st.markdown("""<style>div[data-testid="stColumn"] button { min-height: auto !important; padding: 5px 10px !important; }</style>""", unsafe_allow_html=True)
-                    if col_btn.button("🗑️ Apagar", key=f"del_item_{id_peca}", use_container_width=True):
-                        st.session_state["id_para_excluir"] = id_peca
-                        st.session_state["nome_para_excluir"] = nome_peca
-                        st.session_state["qtd_para_excluir"] = quantidade
+        cursor.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
+        pecas_deposito = cursor.fetchall()
+        
+        if pecas_deposito:
+            # Renderiza as peças em linhas organizadas com um botão ao lado
+            for id_peca, nome_peca, quantidade in pecas_deposito:
+                col_info, col_btn = st.columns([6, 1])
                 
-                if "id_para_excluir" in st.session_state:
-                    st.markdown("---")
-                    st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
-                    senha_adm = st.text_input("Digite sua senha de Garagista para apagar:", type="password", key="pwd_del_puro")
-                    col_conf, col_canc = st.columns(2)
+                # Alerta visual em vermelho caso tenha apenas 1 peça
+                if quantidade == 1:
+                    col_info.markdown(f"🔴 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades (CRÍTICO)")
+                else:
+                    col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
+                
+                # Cria um botão de lixeira individual para cada item
+                if col_btn.button("🗑️ Excluir", key=f"del_{id_peca}"):
+                    st.session_state["id_para_excluir"] = id_peca
+                    st.session_state["nome_para_excluir"] = nome_peca
+                    st.session_state["qtd_para_excluir"] = quantidade
+            
+            # Se clicou em excluir, abre o validador de senha fixo embaixo da tabela
+            if "id_para_excluir" in st.session_state:
+                st.markdown("---")
+                st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
+                
+                senha_adm = st.text_input("Digite sua senha de Garagista para apagar permanentemente:", type="password", key="senha_exclusao_direta")
+                col_conf, col_canc = st.columns([1, 5])
+                
+                if col_conf.button("💥 Confirmar Deletar", type="primary"):
+                    garagista_identificado = None
+                    for chave, dados in GARAGISTAS.items():
+                        if senha_adm == dados["senha"]:
+                            garagista_identificado = dados["nome"]
+                            break
+                    
+                    if not garagista_identificado:
+                        st.error("❌ Senha incorreta! Acesso negado.")
+                    else:
+                        id_del = st.session_state["id_para_excluir"]
+                        nome_del = st.session_state["nome_para_excluir"]
+                        qtd_del = st.session_state["qtd_para_excluir"]
+                        
+                        # Executa a remoção direta por ID numérico
+                        cursor.execute("DELETE FROM estoque WHERE id = %s", (id_del,))
+                        
+                        # Salva na auditoria do histórico
+                        data_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                        cursor.execute(
+                            "INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)",
+                            ("EXCLUSÃO", nome_del, qtd_del, "-", f"Item apagado por: {garagista_identificado}", data_actual)
+                        )
+                        conexao.commit()
+                        st.success("Item removido com sucesso!")
+                        
+                        # Limpa os estados da memória
+                        del st.session_state["id_para_excluir"]
+                        st.rerun()
+                        
+                if col_canc.button("Cancelar"):
+                    del st.session_state["id_para_excluir"]
+                    st.rerun()
+        else:
+            st.info("Nenhuma peça cadastrada no depósito no momento.")
+            
+        st.markdown("---")
+        st.subheader("📜 Histórico Geral de Movimentações")
+        df_historico = pd.read_sql_query("SELECT tipo_movimentacao as \"Operação\", nome_peca as \"Peça\", quantidade as \"Qtd\", frota as \"Frota/Veículo\", utilizacao as \"Utilização\", data_hora as \"Data/Hora\" FROM historico ORDER BY id DESC", conexao)
+        if not df_historico.empty:
+            st.dataframe(df_historico, use_container_width=True)
+
+    # --- ABA 2: ENTRADA ---
+    elif aba == "📥 Dar Entrada em Peça":
+        st.subheader("📥 Registro de Entrada no Depósito")
+        with st.form("form_entrada", clear_on_submit=True):
+            nome = st.text_input("Nome da Peça / Código:").strip().upper()
+            qtd = st.number_input("Quantidade de Entrada:", min_value=1, step=1)
+            if st.form_submit_button("Confirmar Entrada") and nome:
+                cursor.execute("INSERT INTO estoque (nome_peca, quantidade) VALUES (%s, %s) ON CONFLICT(nome_peca) DO UPDATE SET quantidade = estoque.quantidade + EXCLUDED.quantidade", (nome, qtd))
+                cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("ENTRADA", nome, qtd, "-", "Abastecimento de Depósito", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+                conexao.commit()
+                st.success(f"Entrada realizada!")
+                st.rerun()
+
+    # --- ABA 3: SAÍDA ---
+    elif aba == "📤 Dar Saída (Destinar à Frota)":
+        st.subheader("📤 Registro de Saída para Frota")
+        cursor.execute("SELECT id, nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
+        dados_saida = cursor.fetchall()
+        
+        if not dados_saida:
+            st.warning("Não há peças disponíveis.")
+        else:
+            opcoes_saida = {f"{linha[1]}": linha[0] for linha in dados_saida}
+            
+            with st.form("form_saida", clear_on_submit=True):
+                peca_exibida = st.selectbox("Selecione a Peça:", list(opcoes_saida.keys()))
+                id_peca_sel = opcoes_saida[peca_exibida]
+                
+                cursor.execute("SELECT quantidade, nome_peca FROM estoque WHERE id = %s", (id_peca_sel,))
+                resultado_saldo = cursor.fetchone()
+                saldo_atual = resultado_saldo[0] if resultado_saldo else 0
+                nome_peca_real = resultado_saldo[1] if resultado_saldo else ""
+                
+                st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
+                
+                qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
