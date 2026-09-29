@@ -142,6 +142,7 @@ if conexao:
         if not dados_saida:
             st.warning("Não há peças disponíveis.")
         else:
+            # FIX: Monta o menu associando o nome limpo ao ID numérico puro
             opcoes_saida = {f"{linha[1]}": linha[0] for linha in dados_saida}
             
             with st.form("form_saida", clear_on_submit=True):
@@ -179,6 +180,7 @@ if conexao:
         if not dados_exclusao:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
         else:
+            # FIX: Monta o menu associando o nome limpo ao ID numérico puro
             opcoes_exclusao = {f"{linha[1]}": linha[0] for linha in dados_exclusao}
             
             with st.form("form_exclusao", clear_on_submit=True):
@@ -203,4 +205,3 @@ if conexao:
                             id_deletar = opcoes_exclusao[peca_exibida]
                             cursor = conexao.cursor()
                             
-                            # 1. Puxa os dados corretos descompactando a tupla
