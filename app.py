@@ -94,7 +94,7 @@ if conexao:
     # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
     cursor = conexao.cursor()
     cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-    pecas_criticas = [linha[0] for linha in cursor.fetchall()] # Extrai o texto puro
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro
     if pecas_criticas:
         st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
         st.markdown("---")
@@ -160,7 +160,7 @@ if conexao:
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA 100% LIMPA DE TUPLAS ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA (CORRIGIDA) ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
