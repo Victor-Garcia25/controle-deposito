@@ -79,24 +79,19 @@ st.markdown(
     h1, h2, h3, p, label, .stMarkdown {
         color: white !important;
     }
-    /* Estilização para transformar os botões nativos do Streamlit nos cards brancos */
+    /* Estilo limpo e moderno para os botões de ação abaixo dos cards */
     div.stButton > button {
-        background-color: white !important;
-        color: #333333 !important;
-        border: 1px solid #cccccc !important;
-        border-radius: 12px !important;
-        padding: 30px 10px !important;
+        background-color: #ffffff !important;
+        color: #0b1e4f !important;
         font-weight: bold !important;
-        font-size: 16px !important;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.2) !important;
-        min-height: 180px !important;
-        width: 100% !important;
-        white-space: pre-line !important;
-        transition: transform 0.2s, box-shadow 0.2s;
+        border-radius: 8px !important;
+        border: none !important;
+        box-shadow: 0px 3px 10px rgba(0,0,0,0.2) !important;
+        transition: background-color 0.2s;
     }
     div.stButton > button:hover {
-        transform: translateY(-5px) !important;
-        box-shadow: 0px 8px 25px rgba(0,0,0,0.3) !important;
+        background-color: #ff6600 !important;
+        color: white !important;
     }
     </style>
     """,
@@ -134,7 +129,7 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS
+    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS CORRIGIDO
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 30px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
@@ -142,20 +137,35 @@ if conexao:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.markdown("<div style='border-top: 6px solid #ff6600; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
-            if st.button("📊\n\nPainel Geral\n& Histórico", key="card_p1", use_container_width=True):
+            st.markdown("""
+                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #ff6600; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 10px;'>
+                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>📊</h1>
+                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Painel Geral & Histórico</p>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("📊 Acessar Painel", key="btn_p1", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
 
         with col2:
-            st.markdown("<div style='border-top: 6px solid #0066cc; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
-            if st.button("📥\n\nDar Entrada\nem Peça", key="card_p2", use_container_width=True):
+            st.markdown("""
+                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #0066cc; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 10px;'>
+                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>📥</h1>
+                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Dar Entrada em Peça</p>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("📥 Acessar Entradas", key="btn_p2", use_container_width=True):
                 st.session_state["tela_ativa"] = "📥 Dar Entrada em Peça"
                 st.rerun()
 
         with col3:
-            st.markdown("<div style='border-top: 6px solid #9933ff; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
-            if st.button("📤\n\nDar Saída\npara Frota", key="card_p3", use_container_width=True):
+            st.markdown("""
+                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #9933ff; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 10px;'>
+                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>📤</h1>
+                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Dar Saída para Frota</p>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("📤 Acessar Saídas", key="btn_p3", use_container_width=True):
                 st.session_state["tela_ativa"] = "📤 Dar Saída (Destinar à Frota)"
                 st.rerun()
 
@@ -163,13 +173,18 @@ if conexao:
             cursor.execute("SELECT COUNT(*) FROM estoque WHERE quantidade = 1")
             resultado_criticos = cursor.fetchone()
             qtd_criticos = resultado_criticos[0] if resultado_criticos else 0
-            st.markdown("<div style='border-top: 6px solid #00cc66; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
-            if st.button(f"⚠️\n\nAlertas Críticos\nQuantidade: {qtd_criticos}", key="card_p4", use_container_width=True):
+            st.markdown(f"""
+                <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #00cc66; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 10px;'>
+                    <h1 style='margin: 0; padding: 0; font-size: 35px;'>⚠️</h1>
+                    <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Alertas Críticos: {qtd_criticos}</p>
+                </div>
+            """, unsafe_allow_html=True)
+            if st.button("⚠️ Verificar Alertas", key="btn_p4", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
 
     # =========================================================================
-    # 📋 TELA: PAINEL DO ESTOQUE & HISTÓRICO (CORRIGIDA)
+    # 📋 TELA: PAINEL DO ESTOQUE & HISTÓRICO
     # =========================================================================
     elif st.session_state["tela_ativa"] == "📋 Painel do Estoque & Histórico":
         if st.button("⬅️ Voltar ao Menu Principal", key="back_p1"):
@@ -191,12 +206,10 @@ if conexao:
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
-                # Injeta uma estilização para fazer o botão de apagar voltar ao tamanho pequeno padrão
-                st.markdown("""<style>div[data-testid="stColumn"] button { min-height: auto !important; padding: 5px 10px !important; background-color: #ff4b4b !important; color: white !important; }</style>""", unsafe_allow_html=True)
                 if col_btn.button("🗑️ Apagar", key=f"del_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
-                    st.session_state["qtd_para_excluir"] = quantidade
+                    st.session_state["qtd_para_excluir"] = grandmother if False else quantidade
             
             if "id_para_excluir" in st.session_state:
                 st.markdown("---")
@@ -207,16 +220,3 @@ if conexao:
                 if col_conf.button("💥 Confirmar Deletar", type="primary", key="conf_del"):
                     garagista_identificado = None
                     for chave, dados in GARAGISTAS.items():
-                        if senha_adm == dados["senha"]:
-                            garagista_identificado = dados["nome"]
-                            break
-                    if not garagista_identificado:
-                        st.error("❌ Senha incorreta!")
-                    else:
-                        cursor.execute("DELETE FROM estoque WHERE id = %s", (st.session_state["id_para_excluir"],))
-                        cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)",
-                                       ("EXCLUSÃO", st.session_state["nome_para_excluir"], st.session_state["qtd_para_excluir"], "-", f"Item apagado por: {garagista_identificado}", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
-                        conexao.commit()
-                        st.success("Item removido!")
-                        del st.session_state["id_para_excluir"]
-                        st.rerun()
