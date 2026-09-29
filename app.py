@@ -31,15 +31,15 @@ def conectar_banco():
 conexao = conectar_banco()
 
 if conexao:
-    cursor_inicio = conexao.cursor()
-    cursor_inicio.execute('''
+    cursor = conexao.cursor()
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS estoque (
             id SERIAL PRIMARY KEY,
             nome_peca TEXT UNIQUE,
             quantidade INTEGER DEFAULT 0
         )
     ''')
-    cursor_inicio.execute('''
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS historico (
             id SERIAL PRIMARY KEY,
             tipo_movimentacao TEXT,
@@ -51,7 +51,6 @@ if conexao:
         )
     ''')
     conexao.commit()
-    cursor_inicio.close()
 
 # --- FUNÇÃO PARA CONVERTER IMAGEM PARA BASE64 ---
 def obter_imagem_base64(caminho_imagem):
@@ -79,8 +78,7 @@ st.sidebar.markdown("<hr style='margin-top: 15px; margin-bottom: 15px;'>", unsaf
 aba = st.sidebar.radio("Selecione a Ação", [
     "📋 Painel do Estoque & Histórico", 
     "📥 Dar Entrada em Peça", 
-    "📤 Dar Saída (Destinar à Frota)",
-    "⚙️ Resetar Sistema (Zerar Tudo)"
+    "📤 Dar Saída (Destinar à Frota)"
 ])
 
 # --- 2. PARTE CENTRAL ---
@@ -92,34 +90,46 @@ else:
 st.markdown("---")
 
 if conexao:
-    cursor_principal = conexao.cursor()
+    cursor = conexao.cursor()
+    
+    # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
+    cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()]
+    if pecas_criticas:
+        st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
+        st.markdown("---")
 
     # --- ABA 1: VISUALIZAR COM BOTÃO DE EXCLUIR ---
     if aba == "📋 Painel do Estoque & Histórico":
         st.subheader("📋 Saldo Atual do Depósito")
-        cursor_principal.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
-        pecas_deposito = cursor_principal.fetchall()
+        
+        cursor.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
+        pecas_deposito = cursor.fetchall()
         
         if pecas_deposito:
+            # Renderiza as peças em linhas organizadas com um botão ao lado
             for id_peca, nome_peca, quantidade in pecas_deposito:
-                col_info, col_btn = st.columns([4, 1])
+                col_info, col_btn = st.columns([6, 1])
                 
+                # Alerta visual em vermelho caso tenha apenas 1 peça
                 if quantidade == 1:
-                    col_info.markdown(f"🔴 **{nome_peca}** — Estoque: `{quantidade}` unidades (CRÍTICO)")
+                    col_info.markdown(f"🔴 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades (CRÍTICO)")
                 else:
-                    col_info.markdown(f"📦 **{nome_peca}** — Estoque: `{quantidade}` unidades")
+                    col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
+                # Cria um botão de lixeira individual para cada item
                 if col_btn.button("🗑️ Excluir", key=f"del_{id_peca}"):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
                     st.session_state["qtd_para_excluir"] = quantidade
             
+            # Se clicou em excluir, abre o validador de senha fixo embaixo da tabela
             if "id_para_excluir" in st.session_state:
                 st.markdown("---")
                 st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar permanentemente:", type="password", key="senha_exclusao_direta")
-                col_conf, col_canc = st.columns(2)
+                col_conf, col_canc = st.columns([1, 5])
                 
                 if col_conf.button("💥 Confirmar Deletar", type="primary"):
                     garagista_identificado = None
@@ -135,14 +145,19 @@ if conexao:
                         nome_del = st.session_state["nome_para_excluir"]
                         qtd_del = st.session_state["qtd_para_excluir"]
                         
-                        cursor_principal.execute("DELETE FROM estoque WHERE id = %s", (id_del,))
+                        # Executa a remoção direta por ID numérico
+                        cursor.execute("DELETE FROM estoque WHERE id = %s", (id_del,))
+                        
+                        # Salva na auditoria do histórico
                         data_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                        cursor_principal.execute(
+                        cursor.execute(
                             "INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)",
                             ("EXCLUSÃO", nome_del, qtd_del, "-", f"Item apagado por: {garagista_identificado}", data_actual)
                         )
                         conexao.commit()
                         st.success("Item removido com sucesso!")
+                        
+                        # Limpa os estados da memória
                         del st.session_state["id_para_excluir"]
                         st.rerun()
                         
@@ -165,8 +180,8 @@ if conexao:
             nome = st.text_input("Nome da Peça / Código:").strip().upper()
             qtd = st.number_input("Quantidade de Entrada:", min_value=1, step=1)
             if st.form_submit_button("Confirmar Entrada") and nome:
-                cursor_principal.execute("INSERT INTO estoque (nome_peca, Dog_quantidade if False else quantidade) VALUES (%s, %s) ON CONFLICT(nome_peca) DO UPDATE SET quantidade = estoque.quantidade + EXCLUDED.quantidade", (nome, qtd))
-                cursor_principal.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("ENTRADA", nome, qtd, "-", "Abastecimento de Depósito", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+                cursor.execute("INSERT INTO estoque (nome_peca, quantidade) VALUES (%s, %s) ON CONFLICT(nome_peca) DO UPDATE SET quantidade = estoque.quantidade + EXCLUDED.quantidade", (nome, qtd))
+                cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("ENTRADA", nome, qtd, "-", "Abastecimento de Depósito", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                 conexao.commit()
                 st.success(f"Entrada realizada!")
                 st.rerun()
@@ -174,8 +189,8 @@ if conexao:
     # --- ABA 3: SAÍDA ---
     elif aba == "📤 Dar Saída (Destinar à Frota)":
         st.subheader("📤 Registro de Saída para Frota")
-        cursor_principal.execute("SELECT id, nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        dados_saida = cursor_principal.fetchall()
+        cursor.execute("SELECT id, nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
+        dados_saida = cursor.fetchall()
         
         if not dados_saida:
             st.warning("Não há peças disponíveis.")
@@ -186,23 +201,11 @@ if conexao:
                 peca_exibida = st.selectbox("Selecione a Peça:", list(opcoes_saida.keys()))
                 id_peca_sel = opcoes_saida[peca_exibida]
                 
-                cursor_aux = conexao.cursor()
-                cursor_aux.execute("SELECT quantidade FROM estoque WHERE id = %s", (id_peca_sel,))
-                resultado_saldo = cursor_aux.fetchone()
-                cursor_aux.close()
-                
+                cursor.execute("SELECT quantidade, nome_peca FROM estoque WHERE id = %s", (id_peca_sel,))
+                resultado_saldo = cursor.fetchone()
                 saldo_atual = resultado_saldo[0] if resultado_saldo else 0
+                nome_peca_real = resultado_saldo[1] if resultado_saldo else ""
+                
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
-                frota = st.text_input("Identificação da Frota:").strip().upper()
-                utilizacao = st.text_input("Utilização da Peça:").strip()
-                
-                if st.form_submit_button("Confirmar Saída") and frota and utilizacao:
-                    novo_saldo = saldo_atual - qtd_saida
-                    cursor_principal.execute("UPDATE estoque SET quantidade = %s WHERE id = %s", (novo_saldo, id_peca_sel))
-                    cursor_principal.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", peca_exibida, qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
-                    conexao.commit()
-                    st.success(f"Saída realizada!")
-                    st.rerun()
-
