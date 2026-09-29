@@ -90,7 +90,7 @@ st.markdown(
         box-shadow: 0px 4px 15px rgba(0,0,0,0.2) !important;
         min-height: 180px !important;
         width: 100% !important;
-        white-space: pre-line !important; /* Permite quebra de linha com \n */
+        white-space: pre-line !important;
         transition: transform 0.2s, box-shadow 0.2s;
     }
     div.stButton > button:hover {
@@ -102,20 +102,18 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- 1. BARRA LATERAL (NAVEGAÇÃO REFORMULADA) ---
+# --- 1. BARRA LATERAL ---
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 if dados_img:
     st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{dados_img}" style="max-width: 85%; max-height: 150px; border-radius: 8px;"></div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("<hr style='margin-top: 15px; margin-bottom: 15px;'>", unsafe_allow_html=True)
 
-# Inicializa a memória da tela se ela não existir
 if "tela_ativa" not in st.session_state:
     st.session_state["tela_ativa"] = "🏠 Menu Principal"
 
 opcoes_menu = ["🏠 Menu Principal", "📋 Painel do Estoque & Histórico", "📥 Dar Entrada em Peça", "📤 Dar Saída (Destinar à Frota)"]
 
-# Caixinha de seleção lateral redesenhada para evitar conflitos de tela vazia
 aba_lateral = st.sidebar.selectbox(
     "Navegação Direta:", 
     opcoes_menu, 
@@ -123,7 +121,6 @@ aba_lateral = st.sidebar.selectbox(
     key="selectbox_navegacao"
 )
 
-# Se o usuário mudar manualmente pela caixinha lateral, atualiza o estado imediatamente
 if aba_lateral != st.session_state["tela_ativa"]:
     st.session_state["tela_ativa"] = aba_lateral
     st.rerun()
@@ -136,7 +133,7 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS (NATIVO CORRIGIDO)
+    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS CLICÁVEIS
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 30px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
@@ -145,7 +142,6 @@ if conexao:
         
         with col1:
             st.markdown("<div style='border-top: 6px solid #ff6600; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
-            # \n serve para empurrar o texto para baixo, imitando o layout do card
             if st.button("📊\n\nPainel Geral\n& Histórico", key="card_p1", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
@@ -191,7 +187,6 @@ if conexao:
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
-                # Botão menor de lixeira para excluir peças individuais
                 if col_btn.button("🗑️ Apagar", key=f"del_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
@@ -199,7 +194,7 @@ if conexao:
             
             if "id_para_excluir" in st.session_state:
                 st.markdown("---")
-                st.warning(f"⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
+                st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar:", type="password", key="pwd_del")
                 col_conf, col_canc = st.columns([1, 5])
                 
@@ -223,3 +218,9 @@ if conexao:
                     del st.session_state["id_para_excluir"]
                     st.rerun()
         else:
+            st.info("Nenhuma peça cadastrada no momento.")
+            
+        st.markdown("---")
+        st.subheader("📜 Histórico Geral de Movimentações")
+        df_historico = pd.read_sql_query("SELECT tipo_movimentacao as \"Operação\", nome_peca as \"Peça\", quantidade as \"Qtd\", frota as \"Frota/Veículo\", utilizacao as \"Utilização\", data_hora as \"Data/Hora\" FROM historico ORDER BY id DESC", conexao)
+        if not df_historico.empty:
