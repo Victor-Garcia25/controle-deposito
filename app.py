@@ -79,17 +79,17 @@ st.markdown(
     h1, h2, h3, p, label, .stMarkdown {
         color: white !important;
     }
-    /* Estilo limpo para os botões do Menu Principal */
-    .css-btn-container button {
+    /* Estilização limpa para os botões do Menu Principal */
+    div.stButton > button {
         background-color: #ffffff !important;
         color: #0b1e4f !important;
         font-weight: bold !important;
         border-radius: 8px !important;
         border: none !important;
         box-shadow: 0px 3px 10px rgba(0,0,0,0.2) !important;
-        padding: 10px 20px !important;
+        transition: background-color 0.2s, color 0.2s;
     }
-    .css-btn-container button:hover {
+    div.stButton > button:hover {
         background-color: #ff6600 !important;
         color: white !important;
     }
@@ -98,7 +98,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Memória da tela ativa controlada estritamente pelos botões centrais
+# Oculta completamente a barra lateral cinza por padrão para evitar cliques fantasmas
+st.markdown("<style>[data-testid=\"stSidebar\"] {display: none;}</style>", unsafe_allow_html=True)
+
+# Memória da tela ativa controlada unicamente pelos botões centrais do aplicativo
 if "tela_ativa" not in st.session_state:
     st.session_state["tela_ativa"] = "🏠 Menu Principal"
 
@@ -110,7 +113,7 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA 1: MENU PRINCIPAL EM CARDS (SEM ABA LATERAL)
+    # 🏠 TELA 1: MENU PRINCIPAL EM BLOCOS (DASHBOARD)
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 40px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
@@ -124,11 +127,9 @@ if conexao:
                     <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Painel Geral & Histórico</p>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown('<div class="css-btn-container">', unsafe_allow_html=True)
-            if st.button("📊 Acessar Painel", key="btn_ir_p1", use_container_width=True):
+            if st.button("📊 Acessar Painel", key="btn_p1_main", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown("""
@@ -137,11 +138,9 @@ if conexao:
                     <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Dar Entrada em Peça</p>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown('<div class="css-btn-container">', unsafe_allow_html=True)
-            if st.button("📥 Acessar Entradas", key="btn_ir_p2", use_container_width=True):
+            if st.button("📥 Acessar Entradas", key="btn_p2_main", use_container_width=True):
                 st.session_state["tela_ativa"] = "📥 Dar Entrada em Peça"
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col3:
             st.markdown("""
@@ -150,39 +149,36 @@ if conexao:
                     <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Dar Saída para Frota</p>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown('<div class="css-btn-container">', unsafe_allow_html=True)
-            if st.button("📤 Acessar Saídas", key="btn_ir_p3", use_container_width=True):
+            if st.button("📤 Acessar Saídas", key="btn_p3_main", use_container_width=True):
                 st.session_state["tela_ativa"] = "📤 Dar Saída (Destinar à Frota)"
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col4:
             cursor.execute("SELECT COUNT(*) FROM estoque WHERE quantidade = 1")
-            resultado_criticos = cursor.fetchone()
-            qtd_criticos = resultado_criticos[0] if resultado_criticos else 0
+            res_criticos = cursor.fetchone()
+            qtd_criticos = res_criticos[0] if res_criticos else 0
             st.markdown(f"""
                 <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #00cc66; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 150px; margin-bottom: 12px;'>
                     <h1 style='margin: 0; padding: 0; font-size: 35px;'>⚠️</h1>
                     <p style='font-weight: bold; font-size: 15px; margin-top: 10px; color: #333333 !important;'>Alertas Críticos: {qtd_criticos}</p>
                 </div>
             """, unsafe_allow_html=True)
-            st.markdown('<div class="css-btn-container">', unsafe_allow_html=True)
-            if st.button("⚠️ Verificar Alertas", key="btn_ir_p4", use_container_width=True):
+            if st.button("⚠️ Verificar Alertas", key="btn_p4_main", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
     # =========================================================================
-    # 📋 TELA 2: PAINEL DO ESTOQUE & HISTÓRICO (COM BOTÃO DE VOLTAR)
+    # 📋 TELA 2: PAINEL DO ESTOQUE & HISTÓRICO
     # =========================================================================
     elif st.session_state["tela_ativa"] == "📋 Painel do Estoque & Histórico":
-        if st.button("⬅️ Voltar ao Menu Principal", key="back_to_menu_1"):
+        # Botão de retorno explícito e blindado contra loops
+        if st.button("⬅️ Voltar para o Menu Principal", key="back_btn_1", type="secondary"):
             st.session_state["tela_ativa"] = "🏠 Menu Principal"
             st.rerun()
             
         st.markdown("---")
         st.subheader("📋 Saldo Atual do Depósito")
-        cursor.execute("SELECT id, nome_peca, quantity if False else quantidade FROM estoque ORDER BY nome_peca")
+        cursor.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
         pecas_deposito = cursor.fetchall()
         
         df_estoque = pd.read_sql_query("SELECT nome_peca as \"Nome da Peça\", quantidade as \"Quantidade em Estoque\" FROM estoque ORDER BY nome_peca", conexao)
@@ -196,6 +192,8 @@ if conexao:
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
+                # Modificador inline para o botão de apagar não herdar tamanho gigante
+                st.markdown("""<style>div[data-testid="stColumn"] button { min-height: auto !important; padding: 5px 10px !important; }</style>""", unsafe_allow_html=True)
                 if col_btn.button("🗑️ Apagar", key=f"del_item_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
@@ -212,3 +210,5 @@ if conexao:
                     for chave, dados in GARAGISTAS.items():
                         if senha_adm == dados["senha"]:
                             garagista_identificado = dados["nome"]
+                            break
+                    if not garagista_identificado:
