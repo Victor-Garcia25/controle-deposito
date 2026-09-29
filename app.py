@@ -78,7 +78,8 @@ st.sidebar.markdown("<hr style='margin-top: 15px; margin-bottom: 15px;'>", unsaf
 aba = st.sidebar.radio("Selecione a Ação", [
     "📋 Painel do Estoque & Histórico", 
     "📥 Dar Entrada em Peça", 
-    "📤 Dar Saída (Destinar à Frota)"
+    "📤 Dar Saída (Destinar à Frota)",
+    "⚙️ Resetar Sistema (Zerar Tudo)"
 ])
 
 # --- 2. PARTE CENTRAL ---
@@ -107,29 +108,25 @@ if conexao:
         pecas_deposito = cursor.fetchall()
         
         if pecas_deposito:
-            # Renderiza as peças em linhas organizadas com um botão ao lado
             for id_peca, nome_peca, quantidade in pecas_deposito:
-                col_info, col_btn = st.columns([6, 1])
+                col_info, col_btn = st.columns([5, 1])
                 
-                # Alerta visual em vermelho caso tenha apenas 1 peça
                 if quantidade == 1:
                     col_info.markdown(f"🔴 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades (CRÍTICO)")
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
-                # Cria um botão de lixeira individual para cada item
                 if col_btn.button("🗑️ Excluir", key=f"del_{id_peca}"):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
                     st.session_state["qtd_para_excluir"] = quantidade
             
-            # Se clicou em excluir, abre o validador de senha fixo embaixo da tabela
             if "id_para_excluir" in st.session_state:
                 st.markdown("---")
                 st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar permanentemente:", type="password", key="senha_exclusao_direta")
-                col_conf, col_canc = st.columns([1, 5])
+                col_conf, col_canc = st.columns(2)
                 
                 if col_conf.button("💥 Confirmar Deletar", type="primary"):
                     garagista_identificado = None
@@ -145,10 +142,7 @@ if conexao:
                         nome_del = st.session_state["nome_para_excluir"]
                         qtd_del = st.session_state["qtd_para_excluir"]
                         
-                        # Executa a remoção direta por ID numérico
                         cursor.execute("DELETE FROM estoque WHERE id = %s", (id_del,))
-                        
-                        # Salva na auditoria do histórico
                         data_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                         cursor.execute(
                             "INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)",
@@ -156,8 +150,6 @@ if conexao:
                         )
                         conexao.commit()
                         st.success("Item removido com sucesso!")
-                        
-                        # Limpa os estados da memória
                         del st.session_state["id_para_excluir"]
                         st.rerun()
                         
@@ -209,3 +201,9 @@ if conexao:
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
+                frota = st.text_input("Identificação da Frota:").strip().upper()
+                utilizacao = st.text_input("Utilização da Peça:").strip()
+                
+                if st.form_submit_button("Confirmar Saída") and frota and utilizacao:
+                    novo_saldo = saldo_atual - qtd_saida
+                    cursor.execute("UPDATE estoque SET quantidade = %s WHERE id = %s", (novo_saldo, id_peca_sel))
