@@ -103,7 +103,7 @@ aba_lateral = st.sidebar.selectbox("Navegação Direta:", [
 ])
 
 # Sincroniza a barra lateral com o estado das telas
-if aba_lateral != st.session_state["tela_ativa"] and st.sidebar.button("Ir para seleção"):
+if aba_lateral != st.session_state["tela_ativa"]:
     st.session_state["tela_ativa"] = aba_lateral
     st.rerun()
 
@@ -115,15 +115,13 @@ if conexao:
     cursor = conexao.cursor()
 
     # =========================================================================
-    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS (LAYOUT DA IMAGEM)
+    # 🏠 TELA: MENU PRINCIPAL EM BLOCOS (LAYOUT EM CARDS)
     # =========================================================================
     if st.session_state["tela_ativa"] == "🏠 Menu Principal":
         st.markdown("<h2 style='text-align: center; font-weight: bold; margin-bottom: 30px;'>Sistema Integrado de Gestão de Almoxarifado</h2>", unsafe_allow_html=True)
         
-        # Criação da estrutura de colunas para os blocos
         col1, col2, col3, col4 = st.columns(4)
         
-        # CARD 1: Painel do Estoque
         with col1:
             st.markdown("""
                 <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #ff6600; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 160px;'>
@@ -135,7 +133,6 @@ if conexao:
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
 
-        # CARD 2: Entradas de Materiais
         with col2:
             st.markdown("""
                 <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #0066cc; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 160px;'>
@@ -147,7 +144,6 @@ if conexao:
                 st.session_state["tela_ativa"] = "📥 Dar Entrada em Peça"
                 st.rerun()
 
-        # CARD 3: Saídas para Frota
         with col3:
             st.markdown("""
                 <div style='background-color: white; border-radius: 12px; padding: 25px; text-align: center; border-top: 6px solid #9933ff; box-shadow: 0px 4px 15px rgba(0,0,0,0.2); min-height: 160px;'>
@@ -159,7 +155,6 @@ if conexao:
                 st.session_state["tela_ativa"] = "📤 Dar Saída (Destinar à Frota)"
                 st.rerun()
 
-        # CARD 4: Inventário e Alertas (Visualização rápida de críticos)
         with col4:
             cursor.execute("SELECT COUNT(*) FROM estoque WHERE quantidade = 1")
             qtd_criticos = cursor.fetchone()[0]
@@ -215,3 +210,8 @@ if conexao:
                     else:
                         cursor.execute("DELETE FROM estoque WHERE id = %s", (st.session_state["id_para_excluir"],))
                         cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)",
+                                       ("EXCLUSÃO", st.session_state["nome_para_excluir"], st.session_state["qtd_para_excluir"], "-", f"Item apagado por: {garagista_identificado}", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+                        conexao.commit()
+                        st.success("Item removido!")
+                        del st.session_state["id_para_excluir"]
+                        st.rerun()
