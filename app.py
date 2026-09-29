@@ -5,7 +5,7 @@ from datetime import datetime
 import base64
 import os
 
-st.set_page_config(page_title="Controle de Depósito", layout="wide")
+st.set_page_config(page_title="Controle de Estoque", layout="wide")
 
 # 🔑 NOMES E SENHAS DOS GARAGISTAS
 GARAGISTAS = {
