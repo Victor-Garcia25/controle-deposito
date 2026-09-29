@@ -217,5 +217,5 @@ if conexao:
                 st.markdown("---")
                 st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar:", type="password", key="pwd_del")
-                col_conf, col_canc = st.columns([1, 5])
+                col_conf, col_canc = st.columns(2)
                 
