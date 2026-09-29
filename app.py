@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 import base64
 import os
+import io
 
 st.set_page_config(page_title="Controle de Depósito", layout="wide")
 
@@ -160,14 +161,15 @@ if conexao:
 
         with col4:
             cursor.execute("SELECT COUNT(*) FROM estoque WHERE quantidade = 1")
-            qtd_criticos = cursor.fetchone()[0]
+            resultado_criticos = cursor.fetchone()
+            qtd_criticos = resultado_criticos[0] if resultado_criticos else 0
             st.markdown("<div style='border-top: 6px solid #00cc66; border-radius: 12px 12px 0 0;'></div>", unsafe_allow_html=True)
             if st.button(f"⚠️\n\nAlertas Críticos\nQuantidade: {qtd_criticos}", key="card_p4", use_container_width=True):
                 st.session_state["tela_ativa"] = "📋 Painel do Estoque & Histórico"
                 st.rerun()
 
     # =========================================================================
-    # 📋 TELA: PAINEL DO ESTOQUE & HISTÓRICO
+    # 📋 TELA: PAINEL DO ESTOQUE & HISTÓRICO (CORRIGIDA)
     # =========================================================================
     elif st.session_state["tela_ativa"] == "📋 Painel do Estoque & Histórico":
         if st.button("⬅️ Voltar ao Menu Principal", key="back_p1"):
@@ -178,6 +180,8 @@ if conexao:
         cursor.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
         pecas_deposito = cursor.fetchall()
         
+        df_estoque = pd.read_sql_query("SELECT nome_peca as \"Nome da Peça\", quantidade as \"Quantidade em Estoque\" FROM estoque ORDER BY nome_peca", conexao)
+        
         if pecas_deposito:
             for id_peca, nome_peca, quantidade in pecas_deposito:
                 col_info, col_btn = st.columns([6, 1])
@@ -187,6 +191,8 @@ if conexao:
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
+                # Injeta uma estilização para fazer o botão de apagar voltar ao tamanho pequeno padrão
+                st.markdown("""<style>div[data-testid="stColumn"] button { min-height: auto !important; padding: 5px 10px !important; background-color: #ff4b4b !important; color: white !important; }</style>""", unsafe_allow_html=True)
                 if col_btn.button("🗑️ Apagar", key=f"del_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
@@ -196,7 +202,7 @@ if conexao:
                 st.markdown("---")
                 st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar:", type="password", key="pwd_del")
-                col_conf, col_canc = st.columns([1, 5])
+                col_conf, col_canc = st.columns(2)
                 
                 if col_conf.button("💥 Confirmar Deletar", type="primary", key="conf_del"):
                     garagista_identificado = None
@@ -214,13 +220,3 @@ if conexao:
                         st.success("Item removido!")
                         del st.session_state["id_para_excluir"]
                         st.rerun()
-                if col_canc.button("Cancelar", key="canc_del"):
-                    del st.session_state["id_para_excluir"]
-                    st.rerun()
-        else:
-            st.info("Nenhuma peça cadastrada no momento.")
-            
-        st.markdown("---")
-        st.subheader("📜 Histórico Geral de Movimentações")
-        df_historico = pd.read_sql_query("SELECT tipo_movimentacao as \"Operação\", nome_peca as \"Peça\", quantidade as \"Qtd\", frota as \"Frota/Veículo\", utilizacao as \"Utilização\", data_hora as \"Data/Hora\" FROM historico ORDER BY id DESC", conexao)
-        if not df_historico.empty:
