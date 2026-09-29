@@ -93,22 +93,21 @@ st.markdown("---")
 
 if conexao:
     cursor_principal = conexao.cursor()
-    
-    # --- PAINEL DE ALERTA MÁXIMO BLINDADO CONTRA TRAVAMENTOS ---
-    try:
-        cursor_principal.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-        dados_criticos = cursor_principal.fetchall()
-        pecas_criticas = [str(linha[0]) for linha in dados_criticos] if dados_criticos else []
-        if pecas_criticas:
-            st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
-            st.markdown("---")
-    except Exception:
-        pass
 
     # --- ABA 1: VISUALIZAR COM BOTÃO DE EXCLUIR ---
     if aba == "📋 Painel do Estoque & Histórico":
+        # O Alerta de estoque crítico agora fica apenas dentro desta aba para não travar o resto do sistema
+        try:
+            cursor_principal.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
+            dados_criticos = cursor_principal.fetchall()
+            pecas_criticas = [str(linha[0]) for linha in dados_criticos] if dados_criticos else []
+            if pecas_criticas:
+                st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
+                st.markdown("---")
+        except Exception:
+            pass
+
         st.subheader("📋 Saldo Atual do Depósito")
-        
         cursor_principal.execute("SELECT id, nome_peca, quantidade FROM estoque ORDER BY nome_peca")
         pecas_deposito = cursor_principal.fetchall()
         
@@ -137,8 +136,7 @@ if conexao:
                     garagista_identificado = None
                     for chave, dados in GARAGISTAS.items():
                         if senha_adm == dados["senha"]:
-                            get_nome = dados["nome"]
-                            garagista_identificado = get_nome
+                            garagista_identificado = dados["nome"]
                             break
                     
                     if not garagista_identificado:
