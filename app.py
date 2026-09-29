@@ -94,12 +94,16 @@ st.markdown("---")
 if conexao:
     cursor_principal = conexao.cursor()
     
-    # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
-    cursor_principal.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-    pecas_criticas = [linha[0] for linha in cursor_principal.fetchall()]
-    if pecas_criticas:
-        st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
-        st.markdown("---")
+    # --- PAINEL DE ALERTA MÁXIMO BLINDADO CONTRA TRAVAMENTOS ---
+    try:
+        cursor_principal.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
+        dados_criticos = cursor_principal.fetchall()
+        pecas_criticas = [str(linha[0]) for linha in dados_criticos] if dados_criticos else []
+        if pecas_criticas:
+            st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
+            st.markdown("---")
+    except Exception:
+        pass
 
     # --- ABA 1: VISUALIZAR COM BOTÃO DE EXCLUIR ---
     if aba == "📋 Painel do Estoque & Histórico":
@@ -133,7 +137,8 @@ if conexao:
                     garagista_identificado = None
                     for chave, dados in GARAGISTAS.items():
                         if senha_adm == dados["senha"]:
-                            garagista_identificado = dados["nome"]
+                            get_nome = dados["nome"]
+                            garagista_identificado = get_nome
                             break
                     
                     if not garagista_identificado:
@@ -199,13 +204,9 @@ if conexao:
                 resultado_saldo = cursor_aux.fetchone()
                 cursor_aux.close()
                 
-                saldo_atual = resultado_saldo[0] if resultado_saldo else 0
-                nome_peca_real = resultado_saldo[1] if resultado_saldo else ""
+                saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0
+                nome_peca_real = str(resultado_saldo[1]) if resultado_saldo else ""
                 
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
-                frota = st.text_input("Identificação da Frota:").strip().upper()
-                utilizacao = st.text_input("Utilização da Peça:").strip()
-                
-
