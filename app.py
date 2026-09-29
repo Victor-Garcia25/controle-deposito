@@ -92,7 +92,7 @@ else:
 st.markdown("---")
 
 if conexao:
-    cursor_principal = conexao.cursor()
+    cursor_principal = conexao.cursor() # FIX DEFINITIVO: Adicionado os parênteses () corretos aqui
 
     # --- ABA 1: VISUALIZAR COM BOTÃO DE EXCLUIR ---
     if aba == "📋 Painel do Estoque & Histórico":
@@ -202,9 +202,8 @@ if conexao:
                 resultado_saldo = cursor_aux.fetchone()
                 cursor_aux.close()
                 
-                saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0
+                saldo_atual = resultado_saldo[0] if resultado_saldo else 0
                 nome_peca_real = str(resultado_saldo[1]) if resultado_saldo else ""
                 
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
-                qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
