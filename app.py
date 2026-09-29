@@ -136,7 +136,7 @@ if conexao:
         st.subheader("📤 Registro de Saída para Frota")
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        pecas = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro da tupla
+        pecas = [linha[0] for linha in cursor.fetchall()] # BRINDAGEM: Extrai texto puro da tupla do banco
         
         if not pecas:
             st.warning("Não há peças disponíveis.")
@@ -145,7 +145,7 @@ if conexao:
                 peca_sel = st.selectbox("Selecione a Peça:", pecas)
                 cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
-                saldo_atual = int(cursor.fetchone()[0]) # CORREÇÃO: Extrai o número limpo da tupla
+                saldo_atual = int(cursor.fetchone()[0]) # BRINDAGEM: Extrai número limpo da tupla
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=saldo_atual, step=1)
@@ -160,14 +160,14 @@ if conexao:
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA CORRIGIDA ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA 100% CORRIGIDA ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
         
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro da tupla
+        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # BRINDAGEM: Garante a extração do texto sem tuplas
         
         if not dados_estoque_atual:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
@@ -192,9 +192,9 @@ if conexao:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
                             cursor = conexao.cursor()
-                            # CORREÇÃO DEFINITIVA: Extrai o elemento de dentro da tupla de forma garantida
+                            # BRINDAGEM COMPLETA: Busca a quantidade e descompacta a estrutura com [0]
                             cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
                             resultado_busca = cursor.fetchone()
                             qtd_antes_deletar = int(resultado_busca[0]) if resultado_busca else 0
                             
-                            # Remove do saldo atual
+                            # Executa a remoção enviando a string limpa
