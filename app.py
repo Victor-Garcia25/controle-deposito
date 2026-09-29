@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import psycopg2
 import pandas as pd
 from datetime import datetime
@@ -125,6 +125,7 @@ if conexao:
             nome = st.text_input("Nome da Peça / Código:").strip().upper()
             qtd = st.number_input("Quantidade de Entrada:", min_value=1, step=1)
             if st.form_submit_button("Confirmar Entrada") and nome:
+                cursor = conexao.cursor()
                 cursor.execute("INSERT INTO estoque (nome_peca, quantidade) VALUES (%s, %s) ON CONFLICT(nome_peca) DO UPDATE SET quantidade = estoque.quantidade + EXCLUDED.quantidade", (nome, qtd))
                 cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("ENTRADA", nome, qtd, "-", "Abastecimento de Depósito", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                 conexao.commit()
@@ -134,6 +135,7 @@ if conexao:
     # --- ABA 3: SAÍDA ---
     elif aba == "Dar Saída (Destinar à Frota)":
         st.subheader("📤 Registro de Saída para Frota")
+        cursor = conexao.cursor()
         cursor.execute("SELECT id, nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
         dados_saida = cursor.fetchall()
         
@@ -146,6 +148,7 @@ if conexao:
                 peca_exibida = st.selectbox("Selecione a Peça:", list(opcoes_saida.keys()))
                 id_peca_sel = opcoes_saida[peca_exibida]
                 
+                cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade, nome_peca FROM estoque WHERE id = %s", (id_peca_sel,))
                 resultado_saldo = cursor.fetchone()
                 saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0
@@ -198,9 +201,6 @@ if conexao:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
                             id_deletar = opcoes_exclusao[peca_exibida]
+                            cursor = conexao.cursor()
                             
-                            # 1. Puxa os dados corretos descompactando a tupla [0] e [1]
-                            cursor.execute("SELECT nome_peca, quantidade FROM estoque WHERE id = %s", (id_deletar,))
-                            dados_peca = cursor.fetchone()
-                            
-                            if dados_peca:
+                            # 1. Puxa os dados corretos descompactando a tupla
