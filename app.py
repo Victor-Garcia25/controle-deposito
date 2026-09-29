@@ -79,7 +79,7 @@ st.markdown(
     h1, h2, h3, p, label, .stMarkdown {
         color: white !important;
     }
-    /* Estilo limpo e moderno para os botões de ação abaixo dos cards */
+    /* Estilo limpo para os botões de ação abaixo dos cards */
     div.stButton > button {
         background-color: #ffffff !important;
         color: #0b1e4f !important;
@@ -87,7 +87,7 @@ st.markdown(
         border-radius: 8px !important;
         border: none !important;
         box-shadow: 0px 3px 10px rgba(0,0,0,0.2) !important;
-        transition: background-color 0.2s;
+        transition: background-color 0.2s, color 0.2s;
     }
     div.stButton > button:hover {
         background-color: #ff6600 !important;
@@ -206,17 +206,16 @@ if conexao:
                 else:
                     col_info.markdown(f"📦 **{nome_peca}** — Quantidade em Estoque: `{quantidade}` unidades")
                 
+                # Injeta um estilo menor temporário apenas para o botão apagar ficar proporcional
+                st.markdown("""<style>div[data-testid="stColumn"] button { min-height: auto !important; padding: 5px 10px !important; }</style>""", unsafe_allow_html=True)
                 if col_btn.button("🗑️ Apagar", key=f"del_{id_peca}", use_container_width=True):
                     st.session_state["id_para_excluir"] = id_peca
                     st.session_state["nome_para_excluir"] = nome_peca
-                    st.session_state["qtd_para_excluir"] = grandmother if False else quantidade
+                    st.session_state["qtd_para_excluir"] = quantidade
             
             if "id_para_excluir" in st.session_state:
                 st.markdown("---")
                 st.warning(f"### ⚠️ Confirmar Exclusão de: **{st.session_state['nome_para_excluir']}**")
                 senha_adm = st.text_input("Digite sua senha de Garagista para apagar:", type="password", key="pwd_del")
-                col_conf, col_canc = st.columns(2)
+                col_conf, col_canc = st.columns([1, 5])
                 
-                if col_conf.button("💥 Confirmar Deletar", type="primary", key="conf_del"):
-                    garagista_identificado = None
-                    for chave, dados in GARAGISTAS.items():
