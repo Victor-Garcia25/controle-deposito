@@ -94,7 +94,7 @@ if conexao:
     # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
     cursor = conexao.cursor()
     cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-    pecas_criticas = [str(linha[0]) for linha in cursor.fetchall()] # Garante texto limpo
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()] # FIX: Extrai texto puro da tupla
     if pecas_criticas:
         st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
         st.markdown("---")
@@ -136,7 +136,7 @@ if conexao:
         st.subheader("📤 Registro de Saída para Frota")
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        pecas = [str(linha[0]) for linha in cursor.fetchall()] # Garante texto limpo sem tupla
+        pecas = [linha[0] for linha in cursor.fetchall()] # FIX: Extrai texto puro da tupla
         
         if not pecas:
             st.warning("Não há peças disponíveis.")
@@ -144,9 +144,9 @@ if conexao:
             with st.form("form_saida", clear_on_submit=True):
                 peca_sel = st.selectbox("Selecione a Peça:", pecas)
                 cursor = conexao.cursor()
-                cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (str(peca_sel),))
+                cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
                 resultado_saldo = cursor.fetchone()
-                saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0
+                saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0 # FIX: Pega posição zero da tupla
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
@@ -155,20 +155,20 @@ if conexao:
                 
                 if st.form_submit_button("Confirmar Saída") and frota and utilizacao:
                     novo_saldo = saldo_atual - qtd_saida
-                    cursor.execute("UPDATE estoque SET quantidade = %s WHERE nome_peca = %s", (novo_saldo, str(peca_sel)))
-                    cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", str(peca_sel), qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+                    cursor.execute("UPDATE estoque SET quantidade = %s WHERE nome_peca = %s", (novo_saldo, peca_sel))
+                    cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", peca_sel, qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                     conexao.commit()
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA AUDITADA (CORREÇÃO TOTAL DE FORMATO) ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA AUDITADA (CORREÇÃO DE TUPLAS COMPLETA) ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
         
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        dados_estoque_atual = [str(linha[0]) for linha in cursor.fetchall()] # Garante texto 100% limpo sem tuplas
+        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # FIX EXTRAORDINÁRIO: Remove os parênteses invisíveis da lista do menu
         
         if not dados_estoque_atual:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
@@ -193,8 +193,7 @@ if conexao:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
                             cursor = conexao.cursor()
-                            peca_texto_puro = str(peca_para_excluir) # Força a conversão para texto simples
                             
-                            # 1. Pega a quantidade de forma limpa extraindo o índice zero da tupla
-                            cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_texto_puro,))
+                            # 1. Pega a quantidade correta extraindo o índice zero da tupla
+                            cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
                             resultado_busca = cursor.fetchone()
