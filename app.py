@@ -94,7 +94,7 @@ if conexao:
     # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
     cursor = conexao.cursor()
     cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-    pecas_criticas = [linha[0] for linha in cursor.fetchall()]
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro descompactado
     if pecas_criticas:
         st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
         st.markdown("---")
@@ -136,7 +136,7 @@ if conexao:
         st.subheader("📤 Registro de Saída para Frota")
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        pecas = [linha[0] for linha in cursor.fetchall()] # EXTRAÇÃO CORRETA DA TUPLA
+        pecas = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Pega o texto puro descompactado
         
         if not pecas:
             st.warning("Não há peças disponíveis.")
@@ -146,7 +146,7 @@ if conexao:
                 cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
                 resultado_saldo = cursor.fetchone()
-                saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0 # EXTRAÇÃO DA POSIÇÃO ZERO
+                saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0 # CORREÇÃO: Pega número puro da tupla
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=max(1, saldo_atual), step=1)
@@ -168,7 +168,7 @@ if conexao:
         
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # EXTRAÇÃO CORRETA DA TUPLA
+        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO DEFINITIVA: Descompacta e pega apenas a string pura
         
         if not dados_estoque_atual:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
@@ -197,5 +197,3 @@ if conexao:
                             # 1. Busca a quantidade e descompacta extraindo o índice zero da tupla de forma garantida
                             cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
                             resultado_busca = cursor.fetchone()
-                            qtd_antes_deletar = int(resultado_busca[0]) if resultado_busca else 0 # CORREÇÃO DEFINITIVA
-                            
