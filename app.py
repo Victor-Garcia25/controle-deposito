@@ -94,7 +94,7 @@ if conexao:
     # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
     cursor = conexao.cursor()
     cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-    pecas_criticas = [linha[0] for linha in cursor.fetchall()]
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()] # Extrai o texto puro
     if pecas_criticas:
         st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
         st.markdown("---")
@@ -136,8 +136,7 @@ if conexao:
         st.subheader("📤 Registro de Saída para Frota")
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        # DESCOMPACTAÇÃO GARANTIDA: Extrai a string pura tirando ela de dentro da tupla retornada pelo Postgres
-        pecas = [linha[0] for linha in cursor.fetchall()]
+        pecas = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO: Extrai texto puro tirando a tupla
         
         if not pecas:
             st.warning("Não há peças disponíveis.")
@@ -146,7 +145,7 @@ if conexao:
                 peca_sel = st.selectbox("Selecione a Peça:", pecas)
                 cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
-                saldo_atual = int(cursor.fetchone()[0])
+                saldo_atual = int(cursor.fetchone()[0]) # CORREÇÃO: Extrai número puro tirando a tupla
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=saldo_atual, step=1)
@@ -161,15 +160,14 @@ if conexao:
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA (100% CORRIGIDA E TRATADA) ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA 100% LIMPA DE TUPLAS ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
         
         cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        # DESCOMPACTAÇÃO GARANTIDA: Transforma a lista de tuplas em uma lista de textos puros limpos
-        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()]
+        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()] # CORREÇÃO COMPLETA: Extrai o texto limpo de dentro da lista de tuplas
         
         if not dados_estoque_atual:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
@@ -195,7 +193,7 @@ if conexao:
                         else:
                             cursor = conexao.cursor()
                             
-                            # 1. Pega a quantidade atual do banco de forma segura
+                            # 1. Busca a quantidade antes de deletar tirando da tupla de forma garantida
                             cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
                             resultado_busca = cursor.fetchone()
                             qtd_antes_deletar = int(resultado_busca[0]) if resultado_busca else 0
