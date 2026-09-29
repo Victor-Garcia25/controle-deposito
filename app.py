@@ -145,7 +145,7 @@ if conexao:
                 peca_sel = st.selectbox("Selecione a Peça:", pecas)
                 cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
-                saldo_atual = int(cursor.fetchone()[0])
+                saldo_atual = int(cursor.fetchone()[0]) # Correção aplicada aqui
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=saldo_atual, step=1)
@@ -155,13 +155,12 @@ if conexao:
                 if st.form_submit_button("Confirmar Saída") and frota and utilizacao:
                     novo_saldo = saldo_atual - qtd_saida
                     cursor.execute("UPDATE estoque SET quantidade = %s WHERE nome_peca = %s", (novo_saldo, peca_sel))
-                    # CORREGIDO: Removido termo misturado em inglês da linha de histórico antiga
                     cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", peca_sel, qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                     conexao.commit()
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA CORRIGIDA ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
@@ -193,16 +192,11 @@ if conexao:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
                             cursor = conexao.cursor()
-                            # CORREGIDO: Puxando o número de dentro da lista de forma limpa para evitar o TypeError
+                            # CORREÇÃO DEFINITIVA: Extrai o elemento zero da tupla retornada pelo Postgres
                             cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
-                            qtd_antes_deletar = int(cursor.fetchone()[0])
+                            resultado_busca = cursor.fetchone()
+                            qtd_antes_deletar = int(resultado_busca[0]) if resultado_busca else 0
                             
                             # Remove do saldo atual
                             cursor.execute("DELETE FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
                             
-                            # Registra no histórico
-
-                            
-                            # Registra permanentemente no histórico QUEM deletou e O QUE deletou
-                            data_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
