@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import psycopg2
 import pandas as pd
 from datetime import datetime
@@ -140,7 +140,6 @@ if conexao:
         if not dados_saida:
             st.warning("Não há peças disponíveis.")
         else:
-            # Cria um dicionário para mapear o texto exibido ao ID da peça
             opcoes_saida = {f"{linha[1]}": linha[0] for linha in dados_saida}
             
             with st.form("form_saida", clear_on_submit=True):
@@ -150,7 +149,7 @@ if conexao:
                 cursor.execute("SELECT quantidade, nome_peca FROM estoque WHERE id = %s", (id_peca_sel,))
                 resultado_saldo = cursor.fetchone()
                 saldo_atual = int(resultado_saldo[0]) if resultado_saldo else 0
-                nome_peca_real = resultado_saldo[1]
+                nome_peca_real = resultado_saldo[1] if resultado_saldo else ""
                 
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
@@ -166,7 +165,7 @@ if conexao:
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA BASEADA EM ID (TOTALMENTE IMPOSSÍVEL DE FALHAR) ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA BASEADA EM ID FIXO ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
@@ -177,7 +176,6 @@ if conexao:
         if not dados_exclusao:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
         else:
-            # Cria a lista de opções limpas vinculando o Nome exibido ao ID numérico
             opcoes_exclusao = {f"{linha[1]}": linha[0] for linha in dados_exclusao}
             
             with st.form("form_exclusao", clear_on_submit=True):
@@ -201,4 +199,8 @@ if conexao:
                         else:
                             id_deletar = opcoes_exclusao[peca_exibida]
                             
-                            # 1. Puxa os dados atuais baseando-se no ID fixo
+                            # 1. Puxa os dados corretos descompactando a tupla [0] e [1]
+                            cursor.execute("SELECT nome_peca, quantidade FROM estoque WHERE id = %s", (id_deletar,))
+                            dados_peca = cursor.fetchone()
+                            
+                            if dados_peca:
