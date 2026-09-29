@@ -7,7 +7,7 @@ import os
 
 st.set_page_config(page_title="Controle de Depósito", layout="wide")
 
-# 🔑 DEFINIÇÃO DOS NOMES E SENHAS PERSONALIZADOS DOS GARAGISTAS
+# 🔑 NOMES E SENHAS DOS GARAGISTAS
 GARAGISTAS = {
     "GARAGISTA_01": {"nome": "VICTOR", "senha": "2528"},
     "GARAGISTA_02": {"nome": "REGINALDO", "senha": "7472"}
@@ -92,8 +92,9 @@ st.markdown("---")
 
 if conexao:
     # --- PAINEL DE ALERTA MÁXIMO (Estoque = 1) ---
+    cursor = conexao.cursor()
     cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade = 1")
-    pecas_criticas = [linha for linha in cursor.fetchall()]
+    pecas_criticas = [linha[0] for linha in cursor.fetchall()]
     if pecas_criticas:
         st.error(f"### 🚨 ALERTA MÁXIMO DE COMPRA: PEÇAS ACABANDO!\nAs seguintes peças possuem apenas **1 unidade** no depósito e precisam de reposição urgente: {', '.join([f'**{p}**' for p in pecas_criticas])}")
         st.markdown("---")
@@ -123,6 +124,7 @@ if conexao:
             nome = st.text_input("Nome da Peça / Código:").strip().upper()
             qtd = st.number_input("Quantidade de Entrada:", min_value=1, step=1)
             if st.form_submit_button("Confirmar Entrada") and nome:
+                cursor = conexao.cursor()
                 cursor.execute("INSERT INTO estoque (nome_peca, quantidade) VALUES (%s, %s) ON CONFLICT(nome_peca) DO UPDATE SET quantidade = estoque.quantidade + EXCLUDED.quantidade", (nome, qtd))
                 cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("ENTRADA", nome, qtd, "-", "Abastecimento de Depósito", datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                 conexao.commit()
@@ -132,16 +134,18 @@ if conexao:
     # --- ABA 3: SAÍDA ---
     elif aba == "Dar Saída (Destinar à Frota)":
         st.subheader("📤 Registro de Saída para Frota")
+        cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque WHERE quantidade > 0 ORDER BY nome_peca")
-        pecas = [linha for linha in cursor.fetchall()]
+        pecas = [linha[0] for linha in cursor.fetchall()]
         
         if not pecas:
             st.warning("Não há peças disponíveis.")
         else:
             with st.form("form_saida", clear_on_submit=True):
                 peca_sel = st.selectbox("Selecione a Peça:", pecas)
+                cursor = conexao.cursor()
                 cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_sel,))
-                saldo_atual = int(cursor.fetchone())
+                saldo_atual = int(cursor.fetchone()[0])
                 st.info(f"Saldo atual desta peça no depósito: {saldo_atual} unidades.")
                 
                 qtd_saida = st.number_input("Quantidade de Saída:", min_value=1, max_value=saldo_atual, step=1)
@@ -151,27 +155,26 @@ if conexao:
                 if st.form_submit_button("Confirmar Saída") and frota and utilizacao:
                     novo_saldo = saldo_atual - qtd_saida
                     cursor.execute("UPDATE estoque SET quantidade = %s WHERE nome_peca = %s", (novo_saldo, peca_sel))
+                    # CORREGIDO: Removido termo misturado em inglês da linha de histórico antiga
                     cursor.execute("INSERT INTO historico (tipo_movimentacao, nome_peca, quantidade, frota, utilizacao, data_hora) VALUES (%s, %s, %s, %s, %s, %s)", ("SAÍDA", peca_sel, qtd_saida, frota, utilizacao, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
                     conexao.commit()
                     st.success(f"Saída realizada!")
                     st.rerun()
 
-    # --- ❌ ABA 4: EXCLUIR PEÇA (AUDITADA POR SENHA INDIVIDUAL) ---
+    # --- ❌ ABA 4: EXCLUIR PEÇA ---
     elif aba == "❌ Excluir Peça (Restrito)":
         st.subheader("🗑️ Excluir Item com Identificação de Garagista")
         st.warning("Atenção: A peça será removida do saldo do depósito, e o responsável pela remoção ficará permanentemente gravado no histórico.")
         
-        # Carrega todas as peças cadastradas no estoque
+        cursor = conexao.cursor()
         cursor.execute("SELECT nome_peca FROM estoque ORDER BY nome_peca")
-        dados_estoque_atual = cursor.fetchall()
+        dados_estoque_atual = [linha[0] for linha in cursor.fetchall()]
         
         if not dados_estoque_atual:
             st.info("Não há nenhuma peça cadastrada no sistema no momento.")
         else:
-            lista_nomes_pecas = [linha[0] for linha in dados_estoque_atual]
-            
             with st.form("form_exclusao", clear_on_submit=True):
-                peca_para_excluir = st.selectbox("Selecione a Peça que deseja deletar do estoque:", lista_nomes_pecas)
+                peca_para_excluir = st.selectbox("Selecione a Peça que deseja deletar do estoque:", dados_estoque_atual)
                 senha_digitada = st.text_input("Digite sua senha de Garagista para autorizar:", type="password")
                 
                 botao_deletar = st.form_submit_button("💥 Confirmar Remoção do Estoque")
@@ -180,7 +183,6 @@ if conexao:
                     if senha_digitada == "":
                         st.error("Por favor, insira uma senha para continuar.")
                     else:
-                        # Verifica qual garagista digitou a senha correspondente
                         garagista_identificado = None
                         for chave, dados in GARAGISTAS.items():
                             if senha_digitada == dados["senha"]:
@@ -190,12 +192,16 @@ if conexao:
                         if not garagista_identificado:
                             st.error("❌ Senha incorreta! Acesso negado.")
                         else:
-                            # Busca a quantidade atual da peça antes de deletar
+                            cursor = conexao.cursor()
+                            # CORREGIDO: Puxando o número de dentro da lista de forma limpa para evitar o TypeError
                             cursor.execute("SELECT quantidade FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
-                            qtd_antes_deletar = int(cursor.fetchone())
+                            qtd_antes_deletar = int(cursor.fetchone()[0])
                             
                             # Remove do saldo atual
                             cursor.execute("DELETE FROM estoque WHERE nome_peca = %s", (peca_para_excluir,))
+                            
+                            # Registra no histórico
+
                             
                             # Registra permanentemente no histórico QUEM deletou e O QUE deletou
                             data_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
