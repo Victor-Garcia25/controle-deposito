@@ -83,7 +83,7 @@ aba = st.sidebar.radio("Selecione a Ação", [
 
 # --- 2. PARTE CENTRAL ---
 if dados_img:
-    st.markdown(f'<div style="text-align: center; margin-bottom: -10px;"><img src="data:image/png;base64,{dados_img}" style="max-width: 180px; max-height: 120px; border-radius: 8px; margin-bottom: 10px;"><h1 style="font-weight: bold; margin-top: 0px; color: #ffffff;">Controle de Depósito</h1></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align: center; margin-bottom: -10px;"><img src="data:image/png;base64,{dados_img}" style="max-width: 180px; max-height: 120px; border-radius: 8px; margin-bottom: 10px;"><h1 style="font-weight: bold; margin-top: 0px; color: #ffffff;">Controle de Estoque</h1></div>', unsafe_allow_html=True)
 else:
     st.markdown('<h1 style="text-align: center; font-weight: bold; color: #ffffff;">Controle de Estoque</h1>', unsafe_allow_html=True)
 
